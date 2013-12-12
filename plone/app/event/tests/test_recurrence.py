@@ -83,7 +83,12 @@ class TestTraversalDX(AbstractSampleDataEvents):
         acc_occ = IEventAccessor(occ)
         acc_ctx = IEventAccessor(self.now_event)
         self.assertEqual(acc_occ.start, acc_ctx.start)
-        self.assertEqual(acc_occ.url, 'http://nohost/plone/now/ignored')
+        self.assertEqual(acc_occ.contact_name, acc_ctx.contact_name)
+        self.now_event.foo = 'bar'
+        self.assertEqual(acc_occ.foo, 'bar')
+        self.assertEqual(acc_ctx.foo, 'bar')
+        self.assertEqual(acc_occ.url, 'http://nohost/plone/now/ignore')
+        self.assertEqual(acc_ctx.url, 'http://nohost/plone/now')
 
     def test_traverse_occurrence(self):
         transaction.commit()

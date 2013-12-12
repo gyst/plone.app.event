@@ -1,6 +1,5 @@
 from Acquisition import aq_parent
 from OFS.SimpleItem import SimpleItem
-from Products.CMFPlone.utils import safe_unicode
 from Products.Five.browser import BrowserView
 from plone.app.event.base import guess_date_from
 from plone.app.imaging.scaling import ImageScaling as ATImageScaling
@@ -128,7 +127,7 @@ class EventOccurrenceAccessor(object):
     def __init__(self, context):
         object.__setattr__(self, 'context', context)
 
-        own_attr = ['start', 'end', 'url', 'parent']
+        own_attr = ['start', 'end', 'parent']
         object.__setattr__(self, '_own_attr', own_attr)
 
     def _get_context(self, name):
@@ -152,10 +151,6 @@ class EventOccurrenceAccessor(object):
     # R/O properties
     # TODO: Having uid here makes probably no sense, since Occurrences are
     #       created on the fly and not persistent.
-
-    @property
-    def url(self):
-        return safe_unicode(self.context.absolute_url())
 
 
 class ImageScalingViewFactory(BrowserView):
