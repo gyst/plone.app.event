@@ -15,7 +15,6 @@ from zope.component import adapts
 from zope.interface import Interface
 from zope.interface import implements
 from zope.publisher.interfaces.browser import IBrowserRequest
-import itertools
 
 try:
     from repoze.zope2.publishtraverse import DefaultPublishTraverse
