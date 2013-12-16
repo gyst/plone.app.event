@@ -69,7 +69,8 @@ replacement_zones = {
 
 def get_events(context, start=None, end=None, limit=None,
                ret_mode=RET_MODE_BRAINS, expand=False,
-               sort='start', sort_reverse=False, **kw):
+               sort='start', sort_reverse=False, ongoing=True,
+               **kw):
     """Return all events as catalog brains, possibly within a given
     timeframe.
 
@@ -107,6 +108,9 @@ def get_events(context, start=None, end=None, limit=None,
     :param sort_reverse: Change the order of the sorting.
     :type sort_reverse: boolean
 
+    :param ongoing: Whether to include ongoing events.
+    :type ongoing: boolean
+
     :returns: Portal events, matching the search criteria.
     :rtype: catalog brains, event objects or IEventAccessor object wrapper,
             depending on ret_mode.
@@ -124,14 +128,26 @@ def get_events(context, start=None, end=None, limit=None,
     else:
         query['path'] = kw['path']
 
-    if start:
-        # All events from start date ongoing:
-        # The minimum end date of events is the date from which we search.
-        query['end'] = {'query': start, 'range': 'min'}
-    if end:
-        # All events until end date:
-        # The maximum start date must be the date until we search.
-        query['start'] = {'query': end, 'range': 'max'}
+    if ongoing:
+        # default "ongoing" API: end->min(start), start->max(end)
+        if start:
+            # All events from start date ongoing:
+            # The minimum end date of events is the date from which we search.
+            query['end'] = {'query': start, 'range': 'min'}
+        if end:
+            # All events until end date:
+            # The maximum start date must be the date until we search.
+            query['start'] = {'query': end, 'range': 'max'}
+    else:
+        # not ongoing: start->min(start+end), end->max(start+end)
+        if start and end:
+            query['start'] = {'query': [start, end], 'range': 'min:max'}
+        elif start:
+            query['start'] = {'query': start, 'range': 'min'}
+        elif end:
+            query['start'] = {'query': end, 'range': 'max'}
+        # exclude long ongoing
+        query['end'] = query['start']
 
     # Sorting
     # In expand mode we sort after calculation of recurrences again. But we
@@ -154,7 +170,8 @@ def get_events(context, start=None, end=None, limit=None,
     if sort in ('start', 'end'):
         result = filter_and_resort(context, result,
                                    start, end,
-                                   sort, sort_reverse)
+                                   sort, sort_reverse,
+                                   ongoing)
 
         # Limiting a start/end-sorted result set is possible here
         # and provides an important optimization BEFORE costly expansion
@@ -175,7 +192,8 @@ def get_events(context, start=None, end=None, limit=None,
     return result
 
 
-def filter_and_resort(context, brains, start, end, sort, sort_reverse):
+def filter_and_resort(context, brains, start, end, sort, sort_reverse,
+                      ongoing):
     """#114 sorting bug is fallout from a Products.DateRecurringIndex
     limitation. The index contains a set of start and end dates
     represented as integer: that allows valid slicing of searches.
@@ -206,11 +224,14 @@ def filter_and_resort(context, brains, start, end, sort, sort_reverse):
     :param end: [required] max start datetime (sic!)
     :type start: Python datetime.
 
+    :param sort: Which field to sort on
+    :type sort: 'start' or 'end'
+
     :param sort_reverse: Change the order of the sorting.
     :type sort_reverse: boolean
 
-    :param sort: Which field to sort on
-    :type sort: 'start' or 'end'
+    :param ongoing: Whether to include ongoing events.
+    :type ongoing: boolean
 
     :returns: catalog brains
     :rtype: catalog brains
@@ -229,8 +250,12 @@ def filter_and_resort(context, brains, start, end, sort, sort_reverse):
         # assuming (start, end) pairs belong together
         #assert(len(_allstarts) == len(_allends))
         _occ = itertools.izip(_allstarts, _allends)
-        if start:
+        if ongoing and start:
+            # ongoing events are cut off by end date
             _occ = [(s, e) for (s, e) in _occ if e >= _start]
+        elif start:
+            # non-ongoing events are cut off by start
+            _occ = [(s, e) for (s, e) in _occ if s >= _start]
         if end:
             _occ = [(s, e) for (s, e) in _occ if s <= _end]
         if not _occ:

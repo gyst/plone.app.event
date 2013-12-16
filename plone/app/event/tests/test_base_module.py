@@ -754,7 +754,7 @@ class TestGetEventsOptimizations(AbstractSampleDataEvents):
         self.assertEqual(res, expect[:3], self.diff(res, expect[:3]))
 
     def test_expand_start(self):
-        # now+future events
+        # ongoing+now+future events
         res = self.fmt(get_events(self.portal, expand=False,
                                   start=self.now,
                                   ret_mode=RET_MODE_ACCESSORS))
@@ -775,7 +775,7 @@ class TestGetEventsOptimizations(AbstractSampleDataEvents):
         self.assertEqual(res, expect[:3], self.diff(res, expect[:3]))
 
     def test_expand_end(self):
-        # past+now events
+        # past+ongoing+now events
         res = self.fmt(get_events(self.portal, expand=False,
                                   end=self.now,
                                   ret_mode=RET_MODE_ACCESSORS))
@@ -794,7 +794,7 @@ class TestGetEventsOptimizations(AbstractSampleDataEvents):
         self.assertEqual(res, expect[:3], self.diff(res, expect[:3]))
 
     def test_expand_start_end(self):
-        # only now events
+        # only now + ongoing events
         res = self.fmt(get_events(self.portal, expand=False,
                                   start=self.now,
                                   end=self.now,
@@ -809,6 +809,68 @@ class TestGetEventsOptimizations(AbstractSampleDataEvents):
                                   start=self.now,
                                   end=self.now,
                                   limit=3,
+                                  ret_mode=RET_MODE_ACCESSORS))
+        self.assertEqual(res, expect[:3], self.diff(res, expect[:3]))
+
+    def test_expand_start_noongoing(self):
+        # now+future events
+        res = self.fmt(get_events(self.portal, expand=False,
+                                  start=self.now,
+                                  ongoing=False,
+                                  ret_mode=RET_MODE_ACCESSORS))
+        expect = [
+            (u'Now Event', '2013-05-05 10:00:00', '2013-05-05 11:00:00'),
+            (u'Tomorrow event', '2013-05-06 10:00:00', '2013-05-06 23:59:59'),
+            # Past Recur next occurrence: '2013-05-09 11:00:00'
+            # Past Recur brain.start: '2013-04-25 11:00:00'
+            (u'Past Recur', '2013-04-25 11:00:00', '2013-04-25 12:00:00'),
+            (u'Future Event', '2013-05-15 10:00:00', '2013-05-15 11:00:00')]
+        self.assertEqual(res, expect, self.diff(res, expect))
+
+        # limited now+future events
+        res = self.fmt(get_events(self.portal, expand=False,
+                                  start=self.now,
+                                  limit=3,
+                                  ongoing=False,
+                                  ret_mode=RET_MODE_ACCESSORS))
+        self.assertEqual(res, expect[:3], self.diff(res, expect[:3]))
+
+    def test_expand_end_noongoing(self):
+        # past events
+        res = self.fmt(get_events(self.portal, expand=False,
+                                  end=self.now,
+                                  ongoing=False,
+                                  ret_mode=RET_MODE_ACCESSORS))
+        expect = [
+            (u'Past Event', '2013-04-25 00:00:00', '2013-04-25 23:59:59'),
+            (u'Past Recur', '2013-04-25 11:00:00', '2013-04-25 12:00:00')]
+        self.assertEqual(res, expect, self.diff(res, expect))
+
+        # limited past+now events
+        res = self.fmt(get_events(self.portal, expand=False,
+                                  end=self.now,
+                                  limit=3,
+                                  ongoing=False,
+                                  ret_mode=RET_MODE_ACCESSORS))
+        self.assertEqual(res, expect[:3], self.diff(res, expect[:3]))
+
+    def test_expand_start_end_noongoing(self):
+        # only today
+        res = self.fmt(get_events(self.portal, expand=False,
+                                  start=self.now,
+                                  end=self.tomorrow,  # NB
+                                  ongoing=False,
+                                  ret_mode=RET_MODE_ACCESSORS))
+        expect = [
+            (u'Now Event', '2013-05-05 10:00:00', '2013-05-05 11:00:00')]
+        self.assertEqual(res, expect, self.diff(res, expect))
+
+        # limited today
+        res = self.fmt(get_events(self.portal, expand=False,
+                                  start=self.now,
+                                  end=self.tomorrow,  # NB
+                                  limit=3,
+                                  ongoing=False,
                                   ret_mode=RET_MODE_ACCESSORS))
         self.assertEqual(res, expect[:3], self.diff(res, expect[:3]))
 
